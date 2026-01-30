@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Feedback Hub</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+
+    <style>
+        body {
+            margin: 0; font-family: sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: move 10s ease infinite;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            padding: 20px; color: #333;
+        }
+        @keyframes move { 0% {background-position:0 50%} 50% {background-position:100% 50%} 100% {background-position:0 50%} }
+
+        .form-box, .display-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px; border-radius: 15px; margin-bottom: 20px;
+            width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        input, textarea { width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box;}
+        button { width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        .rating { display: flex; flex-direction: row-reverse; justify-content: center; margin-bottom: 10px; font-size: 30px; }
+        .rating input { display: none; }
+        .rating label { color: #ddd; cursor: pointer; }
+        .rating label:before { content: '★'; }
+        .rating input:checked ~ label { color: #f59e0b; }
+
+        .feedback-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .feedback-item:last-child { border: none; }
+        .stars { color: #f59e0b; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="form-box">
+        <h2 style="margin:0 0 15px 0; text-align:center;">Give Feedback</h2>
+        <div class="rating">
+            <input type="radio" name="star" value="5" id="s5"><label for="s5"></label>
+            <input type="radio" name="star" value="4" id="s4"><label for="s4"></label>
+            <input type="radio" name="star" value="3" id="s3"><label for="s3"></label>
+            <input type="radio" name="star" value="2" id="s2"><label for="s2"></label>
+            <input type="radio" name="star" value="1" id="s1"><label for="s1"></label>
+        </div>
+        <input type="text" id="name" placeholder="Name">
+        <textarea id="msg" rows="3" placeholder="Message"></textarea>
+        <button onclick="send()">Submit to Cloud</button>
+        <p id="status" style="text-align:center; font-size:12px;"></p>
+    </div>
+
+    <div class="display-box">
+        <h3 style="margin-top:0;">Recent Feedback</h3>
+        <div id="list">Waiting for feedback...</div>
+    </div>
+
+<script>
+    // 1. REPLACE THIS WITH YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+        apiKey: "PASTE_HERE",
+        authDomain: "PASTE_HERE",
+        databaseURL: "PASTE_HERE",
+        projectId: "PASTE_HERE",
+        storageBucket: "PASTE_HERE",
+        messagingSenderId: "PASTE_HERE",
+        appId: "PASTE_HERE"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // SENDER: Function to send data
+    function send() {
+        const name = document.getElementById('name').value;
+        const msg = document.getElementById('msg').value;
+        const star = document.querySelector('input[name="star"]:checked')?.value;
+
+        if(!name || !msg || !star) return alert("Fill all fields!");
+
+        db.ref('feedbacks').push({ name, msg, star, time: Date.now() });
+        document.getElementById('name').value = '';
+        document.getElementById('msg').value = '';
+        document.getElementById('status').innerText = "Sent Successfully!";
+    }
+
+    // VIEWER: Listen for live updates
+    db.ref('feedbacks').limitToLast(10).on('value', (snap) => {
+        const list = document.getElementById('list');
+        list.innerHTML = "";
+        snap.forEach((child) => {
+            const data = child.val();
+            list.innerHTML = `
+                <div class="feedback-item">
+                    <strong>${data.name}</strong> <span class="stars">${"★".repeat(data.star)}</span>
+                    <br><small>${data.msg}</small>
+                </div>` + list.innerHTML;
+        });
+    });
+</script>
+</body>
+</html>
